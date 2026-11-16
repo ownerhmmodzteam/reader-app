@@ -253,8 +253,7 @@ private fun HomeScreen(
             ) {
                 Column {
                     Text("YOUR NEXT CHAPTER", color = Color.White.copy(.75f), fontSize = 9.sp, letterSpacing = 2.sp)
-                    Text("Stories worth
-staying up for.", color = Color.White, fontSize = 25.sp, lineHeight = 28.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Stories worth\\nstaying up for.", color = Color.White, fontSize = 25.sp, lineHeight = 28.sp, fontWeight = FontWeight.ExtraBold)
                     Text("Discover manga · manhwa · manhua", color = Color.White.copy(.78f), fontSize = 10.sp)
                 }
             }
