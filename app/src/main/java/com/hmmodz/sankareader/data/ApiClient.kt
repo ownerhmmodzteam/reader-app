@@ -42,35 +42,26 @@ class ApiClient {
         } }
     }
 
+    // Home uses the aggregator endpoint once instead of serially querying every provider.
+    // The global throttle remains in place to respect the service's request limits.
     suspend fun home(): List<Comic> {
-        val result = mutableListOf<Comic>()
-        listOf("/comic/homepage" to "komiku", "/comic/terbaru?page=1" to "komiku", "/comic/populer?page=1" to "komiku").forEach { (path, provider) ->
-            try { result += normalize(get(path), provider) } catch (e: ApiException) { if (e.httpCode == 403 || e.httpCode == 429) throw e }
-            catch (_: Exception) { /* keep other documented home sections available */ }
-        }
-        return result.distinctBy { it.provider + ":" + it.id }.take(80)
+        return normalize(get("/comic/terbaru?page=1", 180_000), "komiku").take(60)
     }
+
     suspend fun latest(providerId: String, page: Int = 1): List<Comic> {
-        val p = ProviderRegistry.byId(providerId); return normalize(get(p.latest(page)), p.id)
+        val p = ProviderRegistry.byId(providerId)
+        return normalize(get(p.latest(page)), p.id)
     }
-    suspend fun latestAll(page: Int = 1): List<Comic> {
-        val result = mutableListOf<Comic>()
-        ProviderRegistry.all.filter { it.enabled }.forEach { p ->
-            try { result += normalize(get(p.latest(page)), p.id) } catch (e: ApiException) { if (e.httpCode == 403 || e.httpCode == 429) throw e }
-            catch (_: Exception) { /* skip only this provider's ordinary parse/network failure */ }
-        }
-        return result.distinctBy { it.provider + ":" + it.id }
-    }
+
+    // "All providers" is represented by the aggregator feed to keep first load responsive.
+    suspend fun latestAll(page: Int = 1): List<Comic> = home()
+
     suspend fun search(providerId: String, q: String, page: Int = 1): List<Comic> {
         if (providerId == "all") {
-            val result = mutableListOf<Comic>()
-            ProviderRegistry.all.filter { it.enabled }.forEach { p ->
-                try { result += normalize(get(p.search(q, page)), p.id) } catch (e: ApiException) { if (e.httpCode == 403 || e.httpCode == 429) throw e }
-                catch (_: Exception) { /* continue only for ordinary provider failures */ }
-            }
-            return result.distinctBy { it.provider + ":" + it.id }
+            return normalize(get("/comic/search?q=${java.net.URLEncoder.encode(q, "UTF-8")}", 90_000), "komiku")
         }
-        val p = ProviderRegistry.byId(providerId); return normalize(get(p.search(q, page)), p.id)
+        val p = ProviderRegistry.byId(providerId)
+        return normalize(get(p.search(q, page)), p.id)
     }
     suspend fun detail(providerId: String, slug: String): Comic {
         val p = ProviderRegistry.byId(providerId)
