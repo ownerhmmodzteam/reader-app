@@ -39,11 +39,8 @@ private data class ReaderPalette(val background: Color, val surface: Color, val 
 private fun foregroundFor(colors: ReaderPalette): Color =
     if (colors.background == Color(0xFFE8EAF0)) Color(0xFF191923) else Color.White
 
-private fun cardForeground(colors: ReaderPalette): Color =
-    if (colors.surface == Color(0xFFFFE66D) || colors.background == Color(0xFFE8EAF0)) Color(0xFF191923) else Color.White
-
 private fun palette(theme: String) = when (theme) {
-    "Neobrutalisme + Dynamic Island" -> ReaderPalette(Color(0xFF101010), Color(0xFFFFE66D), Color(0xFFFF6B6B), 8)
+    "Neobrutalisme + Dynamic Island" -> ReaderPalette(Color(0xFF101010), Color(0xFF252525), Color(0xFFFFE66D), 8)
     "Soft UI + Dynamic Island" -> ReaderPalette(Color(0xFFE8EAF0), Color(0xFFF5F6FA), Color(0xFF6750A4), 22)
     "Liquid Glass + Dynamic Island" -> ReaderPalette(Color(0xFF080D18), Color(0xAA202B40), Color(0xFF83D7FF), 24)
     else -> ReaderPalette(Color(0xFF09090D), Color(0xFF171720), Color(0xFFB79BFF), 18)
@@ -348,7 +345,7 @@ private fun HomeScreen(
             Box(
                 Modifier.padding(horizontal = 18.dp).fillMaxWidth().height(142.dp)
                     .clip(RoundedCornerShape(colors.radius.dp))
-                    .background(Brush.linearGradient(listOf(colors.accent.copy(.85f), colors.surface)))
+                    .background(Brush.linearGradient(listOf(colors.surface, colors.background)))
                     .padding(18.dp), contentAlignment = Alignment.BottomStart
             ) {
                 Column {
@@ -369,7 +366,7 @@ private fun HomeScreen(
                     value = query, onValueChange = setQuery, modifier = Modifier.weight(1f),
                     placeholder = { Text("Search title...") }, singleLine = true,
                     colors = TextFieldDefaults.colors(
-                        focusedTextColor = if (colors.background == Color(0xFFE8EAF0) || colors.surface == Color(0xFFFFE66D)) Color(0xFF191923) else Color.White,
+                        focusedTextColor = if (colors.background == Color(0xFFE8EAF0)) Color(0xFF191923) else Color.White,
                         unfocusedTextColor = if (colors.background == Color(0xFFE8EAF0) || colors.surface == Color(0xFFFFE66D)) Color(0xFF191923) else Color.White,
                         focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
