@@ -276,8 +276,7 @@ private fun SplashScreen(onStart: () -> Unit, colors: ReaderPalette) {
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "Satu tempat untuk membaca manhwa,
-manga, dan komik favoritmu.",
+                        "Satu tempat untuk membaca manhwa,\nmanga, dan komik favoritmu."
                         color = foregroundFor(colors).copy(alpha = .72f),
                         fontSize = 14.sp,
                         lineHeight = 21.sp,
