@@ -25,10 +25,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
+          packages: 'platform-tools'
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Setup Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
@@ -40,7 +41,8 @@ jobs:
           java -version
           gradle --version
           echo "Android SDK: $ANDROID_HOME"
-          ls "$ANDROID_HOME/platforms"
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -d "$ANDROID_HOME/build-tools/35.0.0"
 
       - name: Validate Gradle Project
         run: gradle tasks --no-daemon
