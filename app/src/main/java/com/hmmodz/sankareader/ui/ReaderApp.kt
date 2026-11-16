@@ -1,6 +1,11 @@
 package com.hmmodz.sankareader.ui
 
+import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
@@ -32,7 +37,10 @@ import kotlinx.coroutines.launch
 
 private data class ReaderPalette(val background: Color, val surface: Color, val accent: Color, val radius: Int)
 private fun foregroundFor(colors: ReaderPalette): Color =
-    if (colors.background == Color(0xFFE8EAF0) || colors.surface == Color(0xFFFFE66D)) Color(0xFF191923) else Color.White
+    if (colors.background == Color(0xFFE8EAF0)) Color(0xFF191923) else Color.White
+
+private fun cardForeground(colors: ReaderPalette): Color =
+    if (colors.surface == Color(0xFFFFE66D) || colors.background == Color(0xFFE8EAF0)) Color(0xFF191923) else Color.White
 
 private fun palette(theme: String) = when (theme) {
     "Neobrutalisme + Dynamic Island" -> ReaderPalette(Color(0xFF101010), Color(0xFFFFE66D), Color(0xFFFF6B6B), 8)
@@ -47,6 +55,7 @@ fun ReaderApp() {
     val api = remember { ApiClient() }
     val store = remember { LocalStore(ctx) }
     val scope = rememberCoroutineScope()
+    var appStarted by remember { mutableStateOf(false) }
     var page by remember { mutableStateOf("Home") }
     var returnPage by remember { mutableStateOf("Home") }
     var provider by remember { mutableStateOf("all") }
@@ -63,7 +72,7 @@ fun ReaderApp() {
     var autoNext by remember { mutableStateOf(store.autoNext()) }
     var uiTheme by remember { mutableStateOf(store.uiTheme()) }
     val colors = palette(uiTheme)
-    val foreground = if (uiTheme == "Soft UI + Dynamic Island" || uiTheme == "Neobrutalisme + Dynamic Island") Color(0xFF191923) else Color.White
+    val foreground = if (uiTheme == "Soft UI + Dynamic Island") Color(0xFF191923) else Color.White
 
     fun load(block: suspend () -> List<Comic>) {
         scope.launch {
@@ -103,15 +112,23 @@ fun ReaderApp() {
         openChapter(scope, api, comic, ch, store, { images = it; readerLoading = false }, { chapter = it })
     }
 
-    BackHandler(enabled = page != "Home") { back() }
+    BackHandler(enabled = true) {
+        if (appStarted && page != "Home") {
+            back()
+        } else {
+            (ctx as? Activity)?.finish()
+        }
+    }
 
-    LaunchedEffect(Unit) {
-        val cached = store.cachedHome()
-        if (cached.isNotEmpty()) items = cached
-        load {
-            val fresh = api.home()
-            if (fresh.isNotEmpty()) store.cacheHome(fresh)
-            fresh.ifEmpty { cached }
+    LaunchedEffect(appStarted) {
+        if (appStarted) {
+            val cached = store.cachedHome()
+            if (cached.isNotEmpty()) items = cached
+            load {
+                val fresh = api.home()
+                if (fresh.isNotEmpty()) store.cacheHome(fresh)
+                fresh.ifEmpty { cached }
+            }
         }
     }
 
@@ -125,7 +142,9 @@ fun ReaderApp() {
         )
     ) {
         Surface(Modifier.fillMaxSize(), color = colors.background) {
-            Column(Modifier.fillMaxSize()) {
+            if (!appStarted) {
+                SplashScreen(onStart = { appStarted = true }, colors = colors)
+            } else Column(Modifier.fillMaxSize()) {
                 when (page) {
                     "Reader" -> ReaderScreen(
                         images = images, chapter = chapter, speed = speed,
@@ -210,6 +229,84 @@ fun ReaderApp() {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun SplashScreen(onStart: () -> Unit, colors: ReaderPalette) {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+    Box(
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(colors.background, colors.surface.copy(alpha = .96f), colors.background))
+        ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            AnimatedVisibility(
+                visible = visible,
+                enter = fadeIn(tween(700)) + slideInVertically(
+                    initialOffsetY = { it / 2 },
+                    animationSpec = tween(750)
+                )
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        Modifier.size(116.dp).clip(RoundedCornerShape(30.dp))
+                            .background(colors.surface).padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.icon),
+                            contentDescription = "A-+ Reader app icon",
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(22.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    Spacer(Modifier.height(24.dp))
+                    Text(
+                        "A-+ Reader",
+                        color = foregroundFor(colors),
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Satu tempat untuk membaca manhwa,
+manga, dan komik favoritmu.",
+                        color = foregroundFor(colors).copy(alpha = .72f),
+                        fontSize = 14.sp,
+                        lineHeight = 21.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(Modifier.height(34.dp))
+                    Button(
+                        onClick = onStart,
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.accent,
+                            contentColor = if (colors.background == Color(0xFFE8EAF0)) Color.White else Color(0xFF101018)
+                        )
+                    ) {
+                        Text("Mulai Aplikasi", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Icon(Icons.Rounded.ArrowForward, contentDescription = null)
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    Text(
+                        "A-+ READER  •  VERSION 1.0.0",
+                        color = foregroundFor(colors).copy(alpha = .45f),
+                        fontSize = 9.sp,
+                        letterSpacing = 1.4.sp
+                    )
                 }
             }
         }
@@ -303,7 +400,7 @@ private fun HomeScreen(
             Row(Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.accent)
                 Spacer(Modifier.width(10.dp))
-                Text("Loading latest comics...", fontSize = 12.sp, color = Color.Gray)
+                Text("Loading latest comics...", fontSize = 12.sp, color = foregroundFor(colors).copy(alpha = .65f))
             }
         }
         if (items.isNotEmpty()) {
@@ -318,7 +415,7 @@ private fun HomeScreen(
         } else if (!loading) item {
             Text(
                 if (error.isNotBlank()) "Data belum dapat dimuat. Coba lagi beberapa saat." else "Belum ada data. Pilih provider atau lakukan pencarian.",
-                Modifier.padding(20.dp), color = Color.Gray
+                Modifier.padding(20.dp), color = foregroundFor(colors).copy(alpha = .65f)
             )
         }
     }
@@ -338,7 +435,7 @@ private fun ComicCard(c: Comic, click: (Comic) -> Unit, colors: ReaderPalette) {
         AsyncImage(c.cover, null, Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(14.dp)).background(colors.surface), contentScale = ContentScale.Crop)
         Spacer(Modifier.height(7.dp))
         Text(c.title, maxLines = 2, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-        Text(c.latestChapter.ifBlank { c.provider }, color = Color.Gray, fontSize = 10.sp, maxLines = 1)
+        Text(c.latestChapter.ifBlank { c.provider }, color = foregroundFor(colors).copy(alpha = .65f), fontSize = 10.sp, maxLines = 1)
     }
 }
 
@@ -354,9 +451,9 @@ private fun ComicRow(c: Comic, click: (Comic) -> Unit, colors: ReaderPalette) {
         Column(Modifier.weight(1f)) {
             Text(c.title, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(c.provider.uppercase(), color = colors.accent, fontSize = 9.sp)
-            Text(c.latestChapter.ifBlank { "Latest update" }, color = Color.Gray, fontSize = 11.sp)
+            Text(c.latestChapter.ifBlank { "Latest update" }, color = foregroundFor(colors).copy(alpha = .65f), fontSize = 11.sp)
         }
-        Icon(Icons.Rounded.ChevronRight, null, tint = Color.Gray)
+        Icon(Icons.Rounded.ChevronRight, null, tint = foregroundFor(colors).copy(alpha = .65f))
     }
 }
 
@@ -371,7 +468,7 @@ private fun WatchListScreen(favorites: List<Comic>, history: List<Comic>, click:
         if (list.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Rounded.Bookmarks, null, tint = colors.accent, modifier = Modifier.size(38.dp))
-                Text(if (tab == 0) "Your reading history is empty" else "No favorites yet", color = Color.Gray)
+                Text(if (tab == 0) "Your reading history is empty" else "No favorites yet", color = foregroundFor(colors).copy(alpha = .65f))
             }
         } else LazyColumn(contentPadding = PaddingValues(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(list, key = { it.provider + it.id }) { ComicRow(it, click, colors) }
@@ -406,7 +503,7 @@ private fun DetailScreen(
                     Text(c.title, fontSize = 18.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(5.dp))
                     Text(c.provider.uppercase(), color = colors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    if (c.genres.isNotEmpty()) Text(c.genres.take(3).joinToString(" · "), color = Color.Gray, fontSize = 10.sp, maxLines = 2)
+                    if (c.genres.isNotEmpty()) Text(c.genres.take(3).joinToString(" · "), color = foregroundFor(colors).copy(alpha = .65f), fontSize = 10.sp, maxLines = 2)
                     Spacer(Modifier.height(10.dp))
                     OutlinedButton(onClick = toggle, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
                         Icon(if (favorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, null, modifier = Modifier.size(16.dp))
@@ -422,22 +519,22 @@ private fun DetailScreen(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     c.synopsis.ifBlank { "Synopsis is not provided by this endpoint." },
-                    color = Color.Gray, fontSize = 13.sp, lineHeight = 19.sp
+                    color = foregroundFor(colors).copy(alpha = .65f), fontSize = 13.sp, lineHeight = 19.sp
                 )
             }
         }
         item {
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Chapters", Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("${c.chapters.size} chapters", color = Color.Gray, fontSize = 11.sp)
+                Text("${c.chapters.size} chapters", color = foregroundFor(colors).copy(alpha = .65f), fontSize = 11.sp)
             }
         }
         if (c.chapters.isEmpty()) item {
-            Text("Chapter list is unavailable in this response. Try another provider.", Modifier.padding(horizontal = 18.dp), color = Color.Gray, fontSize = 12.sp)
+            Text("Chapter list is unavailable in this response. Try another provider.", Modifier.padding(horizontal = 18.dp), color = foregroundFor(colors).copy(alpha = .65f), fontSize = 12.sp)
         } else items(c.chapters, key = { it.id }) { ch ->
             ListItem(
                 headlineContent = { Text(ch.title, fontSize = 13.sp) },
-                supportingContent = { Text(c.provider, color = Color.Gray, fontSize = 10.sp) },
+                supportingContent = { Text(c.provider, color = foregroundFor(colors).copy(alpha = .65f), fontSize = 10.sp) },
                 trailingContent = { Icon(Icons.Rounded.PlayArrow, null, tint = colors.accent) },
                 modifier = Modifier.padding(horizontal = 12.dp).clip(RoundedCornerShape(12.dp)).clickable { read(ch) },
                 colors = ListItemDefaults.colors(containerColor = colors.surface)
@@ -505,7 +602,7 @@ private fun ReaderScreen(
                 IconButton(onExit) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Color.White) }
                 Text(chapter?.title ?: "Reader", Modifier.weight(1f), color = Color.White, maxLines = 1, fontSize = 13.sp)
                 IconButton({ setAutoNext(!autoNext) }) {
-                    Icon(Icons.Rounded.SkipNext, "Auto next", tint = if (autoNext) colors.accent else Color.Gray)
+                    Icon(Icons.Rounded.SkipNext, "Auto next", tint = if (autoNext) colors.accent else foregroundFor(colors).copy(alpha = .65f))
                 }
             }
             Row(
@@ -566,13 +663,13 @@ private fun ProfileScreen(colors: ReaderPalette) {
                 Text("HM MODZ TEAM", Modifier.padding(top = 13.dp), fontSize = 19.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "Software development team focused on building applications, digital products, and practical technology solutions.",
-                    Modifier.padding(top = 7.dp), color = Color.Gray, fontSize = 12.sp, lineHeight = 18.sp
+                    Modifier.padding(top = 7.dp), color = foregroundFor(colors).copy(alpha = .65f), fontSize = 12.sp, lineHeight = 18.sp
                 )
             }
         }
         SkillCard("Programming Skills", listOf("C++", "Java", "Kotlin"), colors)
         SkillCard("Technology Fields", listOf("Cyber Security", "Reverse Engineer", "Software Developer", "Web Development"), colors)
-        Text("A-+ Reader · Version 1.0.0", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+        Text("A-+ Reader · Version 1.0.0", color = foregroundFor(colors).copy(alpha = .65f), fontSize = 11.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
     }
 }
 
@@ -592,7 +689,7 @@ private fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("UI / UX Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text("Choose the visual style used across A-+ Reader.", color = Color.Gray, fontSize = 12.sp)
+        Text("Choose the visual style used across A-+ Reader.", color = foregroundFor(colors).copy(alpha = .65f), fontSize = 12.sp)
         themes.forEach { theme ->
             val selected = theme == selectedTheme
             Card(
@@ -611,7 +708,7 @@ private fun SettingsScreen(
                                 theme.startsWith("Liquid Glass") -> "Translucent layers and luminous accents"
                                 else -> "Clean Android-native components"
                             },
-                            color = Color.Gray, fontSize = 10.sp
+                            color = foregroundFor(colors).copy(alpha = .65f), fontSize = 10.sp
                         )
                     }
                     if (selected) Icon(Icons.Rounded.CheckCircle, null, tint = colors.accent)
@@ -623,7 +720,7 @@ private fun SettingsScreen(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Auto next chapter", fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                Text("Automatically open the next chapter when scrolling ends.", color = Color.Gray, fontSize = 10.sp)
+                Text("Automatically open the next chapter when scrolling ends.", color = foregroundFor(colors).copy(alpha = .65f), fontSize = 10.sp)
             }
             Switch(checked = autoNext, onCheckedChange = onAutoNext)
         }
