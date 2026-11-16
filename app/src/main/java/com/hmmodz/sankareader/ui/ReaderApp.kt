@@ -155,6 +155,7 @@ fun ReaderApp() {
                             accent = colors.accent,
                             onSettings = { returnPage = page; page = "Settings" }
                         )
+                        Box(Modifier.weight(1f)) {
                         when (page) {
                             "Home" -> HomeScreen(
                                 items, query, { query = it }, provider,
@@ -183,6 +184,7 @@ fun ReaderApp() {
                                     { ch -> startChapter(c, ch) }, colors
                                 )
                             }
+                        }
                         }
                         if (error.isNotBlank()) Text(
                             error, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -238,7 +240,7 @@ private fun HomeScreen(
     onSearch: () -> Unit, onComic: (Comic) -> Unit, colors: ReaderPalette
 ) {
     LazyColumn(
-        modifier = Modifier.weight(1f),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 20.dp, top = 4.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -359,7 +361,7 @@ private fun ComicRow(c: Comic, click: (Comic) -> Unit, colors: ReaderPalette) {
 @Composable
 private fun WatchListScreen(favorites: List<Comic>, history: List<Comic>, click: (Comic) -> Unit, colors: ReaderPalette) {
     var tab by remember { mutableIntStateOf(0) }
-    Column(Modifier.weight(1f)) {
+    Column(Modifier.fillMaxSize()) {
         TabRow(tab, containerColor = colors.background, contentColor = colors.accent) {
             listOf("History", "Favorites").forEachIndexed { i, label -> Tab(tab == i, { tab = i }, text = { Text(label) }) }
         }
