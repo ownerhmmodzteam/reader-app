@@ -33,8 +33,13 @@ class ApiClient {
         return withContext(Dispatchers.IO) { http.newCall(req).execute().use { response ->
             if (response.code == 403) throw ApiException("Akses ditolak oleh server (HTTP 403). Permintaan dihentikan; tidak mencoba melewati pembatasan.", 403)
             if (response.code == 429) throw ApiException("Rate limit tercapai (HTTP 429). Permintaan dihentikan; coba lagi setelah jeda.", 429)
-            if (!response.isSuccessful) throw ApiException("API mengembalikan HTTP ${response.code}", response.code)
             val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                val detail = body.replace(Regex("\\s+"), " ").take(180)
+                val message = "Server API mengalami gangguan (HTTP " + response.code + ")" +
+                    if (detail.isNotBlank()) ": " + detail else ""
+                throw ApiException(message, response.code)
+            }
             if (body.isBlank()) throw ApiException("Respons API kosong")
             val obj = runCatching { JSONObject(body) }.getOrElse { JSONObject().put("data", JSONArray().put(body)) }
             synchronized(cache) { cache[key] = System.currentTimeMillis() to obj.toString(); while (cache.size > 120) cache.remove(cache.keys.first()) }
@@ -45,7 +50,29 @@ class ApiClient {
     // Home uses the aggregator endpoint once instead of serially querying every provider.
     // The global throttle remains in place to respect the service's request limits.
     suspend fun home(): List<Comic> {
-        return normalize(get("/comic/terbaru?page=1", 180_000), "komiku").take(60)
+        // Prefer the documented homepage endpoint, then try stable public feeds.
+        // 403 and 429 are hard stops; do not retry or bypass access restrictions.
+        val candidates = listOf(
+            "/comic/homepage",
+            "/comic/terbaru?page=1",
+            "/comic/populer?page=1"
+        )
+        var lastError: Exception? = null
+        for (path in candidates) {
+            try {
+                val result = normalize(get(path, 180_000), "komiku")
+                if (result.isNotEmpty()) return result.take(60)
+            } catch (e: ApiException) {
+                if (e.httpCode == 403 || e.httpCode == 429) throw e
+                lastError = e
+            } catch (e: Exception) {
+                lastError = e
+            }
+        }
+        throw ApiException(
+            lastError?.message ?: "Server API belum mengirim data. Coba lagi beberapa saat.",
+            (lastError as? ApiException)?.httpCode ?: 0
+        )
     }
 
     suspend fun latest(providerId: String, page: Int = 1): List<Comic> {
