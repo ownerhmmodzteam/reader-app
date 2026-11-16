@@ -21,6 +21,12 @@ class LocalStore(context: Context) {
         if (System.currentTimeMillis() - prefs.getLong("home_cache_at", 0L) > 24L * 60L * 60L * 1000L) return emptyList()
         return runCatching { gson.fromJson<List<Comic>>(prefs.getString("home_cache", "[]"), object : TypeToken<List<Comic>>() {}.type) ?: emptyList() }.getOrDefault(emptyList())
     }
+    fun cacheHome(data: List<Comic>) {
+        prefs.edit().putString("home_cache", gson.toJson(data))
+            .putLong("home_cache_at", System.currentTimeMillis()).apply()
+    }
+    fun uiTheme() = prefs.getString("ui_theme", "Material 3 + Dynamic Island") ?: "Material 3 + Dynamic Island"
+    fun setUiTheme(value: String) { prefs.edit().putString("ui_theme", value).apply() }
     fun speed() = prefs.getInt("speed", 1)
     fun setSpeed(v: Int) { prefs.edit().putInt("speed", v.coerceIn(1, 6)).apply() }
     fun autoNext() = prefs.getBoolean("auto_next", true)
