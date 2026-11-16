@@ -31,6 +31,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private data class ReaderPalette(val background: Color, val surface: Color, val accent: Color, val radius: Int)
+private fun foregroundFor(colors: ReaderPalette): Color =
+    if (colors.background == Color(0xFFE8EAF0) || colors.surface == Color(0xFFFFE66D)) Color(0xFF191923) else Color.White
+
 private fun palette(theme: String) = when (theme) {
     "Neobrutalisme + Dynamic Island" -> ReaderPalette(Color(0xFF101010), Color(0xFFFFE66D), Color(0xFFFF6B6B), 8)
     "Soft UI + Dynamic Island" -> ReaderPalette(Color(0xFFE8EAF0), Color(0xFFF5F6FA), Color(0xFF6750A4), 22)
@@ -252,9 +255,9 @@ private fun HomeScreen(
                     .padding(18.dp), contentAlignment = Alignment.BottomStart
             ) {
                 Column {
-                    Text("YOUR NEXT CHAPTER", color = Color.White.copy(.75f), fontSize = 9.sp, letterSpacing = 2.sp)
-                    Text("Stories worth\nstaying up for.", color = Color.White, fontSize = 25.sp, lineHeight = 28.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("Discover manga · manhwa · manhua", color = Color.White.copy(.78f), fontSize = 10.sp)
+                    Text("YOUR NEXT CHAPTER", color = foregroundFor(colors).copy(.75f), fontSize = 9.sp, letterSpacing = 2.sp)
+                    Text("Stories worth\nstaying up for.", color = foregroundFor(colors), fontSize = 25.sp, lineHeight = 28.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Discover manga · manhwa · manhua", color = foregroundFor(colors).copy(.78f), fontSize = 10.sp)
                 }
             }
         }
@@ -270,7 +273,7 @@ private fun HomeScreen(
                     placeholder = { Text("Search title...") }, singleLine = true,
                     colors = TextFieldDefaults.colors(
                         focusedTextColor = if (colors.background == Color(0xFFE8EAF0) || colors.surface == Color(0xFFFFE66D)) Color(0xFF191923) else Color.White,
-                        unfocusedTextColor = if (colors.background == Color(0xFFE8EAF0)) Color(0xFF191923) else Color.White,
+                        unfocusedTextColor = if (colors.background == Color(0xFFE8EAF0) || colors.surface == Color(0xFFFFE66D)) Color(0xFF191923) else Color.White,
                         focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
                         cursorColor = colors.accent
