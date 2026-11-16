@@ -60,6 +60,7 @@ fun ReaderApp() {
     var autoNext by remember { mutableStateOf(store.autoNext()) }
     var uiTheme by remember { mutableStateOf(store.uiTheme()) }
     val colors = palette(uiTheme)
+    val foreground = if (uiTheme == "Soft UI + Dynamic Island" || uiTheme == "Neobrutalisme + Dynamic Island") Color(0xFF191923) else Color.White
 
     fun load(block: suspend () -> List<Comic>) {
         scope.launch {
@@ -114,13 +115,12 @@ fun ReaderApp() {
     MaterialTheme(
         colorScheme = if (uiTheme == "Soft UI + Dynamic Island") lightColorScheme(
             background = colors.background, surface = colors.surface, primary = colors.accent,
-            onBackground = Color(0xFF191923), onSurface = Color(0xFF191923)
+            onBackground = foreground, onSurface = foreground
         ) else darkColorScheme(
             background = colors.background, surface = colors.surface, primary = colors.accent,
-            onBackground = Color.White, onSurface = Color.White
+            onBackground = foreground, onSurface = foreground
         )
     ) {
-        val foreground = if (uiTheme == "Soft UI + Dynamic Island") Color(0xFF191923) else Color.White
         Surface(Modifier.fillMaxSize(), color = colors.background) {
             Column(Modifier.fillMaxSize()) {
                 when (page) {
@@ -253,7 +253,7 @@ private fun HomeScreen(
             ) {
                 Column {
                     Text("YOUR NEXT CHAPTER", color = Color.White.copy(.75f), fontSize = 9.sp, letterSpacing = 2.sp)
-                    Text("Stories worth\\nstaying up for.", color = Color.White, fontSize = 25.sp, lineHeight = 28.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Stories worth\nstaying up for.", color = Color.White, fontSize = 25.sp, lineHeight = 28.sp, fontWeight = FontWeight.ExtraBold)
                     Text("Discover manga · manhwa · manhua", color = Color.White.copy(.78f), fontSize = 10.sp)
                 }
             }
@@ -269,7 +269,7 @@ private fun HomeScreen(
                     value = query, onValueChange = setQuery, modifier = Modifier.weight(1f),
                     placeholder = { Text("Search title...") }, singleLine = true,
                     colors = TextFieldDefaults.colors(
-                        focusedTextColor = if (colors.background == Color(0xFFE8EAF0)) Color(0xFF191923) else Color.White,
+                        focusedTextColor = if (colors.background == Color(0xFFE8EAF0) || colors.surface == Color(0xFFFFE66D)) Color(0xFF191923) else Color.White,
                         unfocusedTextColor = if (colors.background == Color(0xFFE8EAF0)) Color(0xFF191923) else Color.White,
                         focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
